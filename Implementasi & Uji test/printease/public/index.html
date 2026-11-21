@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrintEase — Pemesanan Percetakan Online & Panel Admin</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --primary: #1d4ed8;
+      --primary-hover: #1e40af;
+      --border: #cbd5e1;
+      --success-bg: #dcfce7;
+      --success-ink: #166534;
+      --error-bg: #fee2e2;
+      --error-ink: #991b1b;
+      --warn-bg: #fef3c7;
+      --warn-ink: #92400e;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+    .container { max-width: 1120px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    h2 { margin: 0 0 12px; font-size: 1.1rem; }
+    label { display: block; font-size: 0.9rem; font-weight: 600; margin-top: 10px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 10px;
+      margin-top: 4px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    button {
+      margin-top: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #334155; }
+    button.success { background: #15803d; }
+    button.danger { background: #b91c1c; }
+    button.sm { padding: 5px 10px; font-size: 0.8rem; margin-top: 4px; }
+    .alert { padding: 12px 14px; border-radius: 8px; font-size: 0.92rem; display: none; }
+    .alert.ok { display: block; background: var(--success-bg); color: var(--success-ink); }
+    .alert.err { display: block; background: var(--error-bg); color: var(--error-ink); }
+    .price-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
+    th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left; vertical-align: top; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: #e2e8f0; }
+    .badge.ok { background: var(--success-bg); color: var(--success-ink); }
+    .badge.err { background: var(--error-bg); color: var(--error-ink); }
+    .badge.warn { background: var(--warn-bg); color: var(--warn-ink); }
+    .session-info { font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+    .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+    .filter-bar > div { min-width: 180px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">PrintEase — Percetakan Online</div>
+    <div class="session-info">
+      <span id="sessionStatus">Status: Belum login</span>
+      <button type="button" class="secondary sm" id="btnLogout" style="display:none; margin:0;">Keluar</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="feedback" class="alert"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>1. Masuk / Daftar Akun</h2>
+        <label for="authName">Nama (untuk daftar baru)</label>
+        <input id="authName" type="text" placeholder="Contoh: Raka Pratama" />
+
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" placeholder="nama@email.com" />
+
+        <label for="authPassword">Kata Sandi (min. 8 karakter)</label>
+        <input id="authPassword" type="password" placeholder="••••••••" />
+
+        <label for="authRole">Peran Akun (untuk pengujian registrasi)</label>
+        <select id="authRole">
+          <option value="customer">Pelanggan (Customer)</option>
+          <option value="admin">Operator / Admin Percetakan</option>
+        </select>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" id="btnLogin">Masuk</button>
+          <button type="button" class="secondary" id="btnRegister">Daftar Akun</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>2. Buat Pesanan Cetak (Customer)</h2>
+        <form id="orderForm" enctype="multipart/form-data">
+          <label for="productSelect">Jenis Produk Cetak</label>
+          <select id="productSelect" name="product_id" required></select>
+
+          <label for="extraOption">Biaya Opsi Tambahan / Finishing (Rp)</label>
+          <input id="extraOption" name="extra_option_price" type="number" min="0" value="0" />
+
+          <label for="quantityInput">Jumlah Eksemplar</label>
+          <input id="quantityInput" name="quantity" type="number" min="1" value="1" required />
+
+          <label for="paymentMethod">Metode Pembayaran</label>
+          <select id="paymentMethod" name="payment_method">
+            <option value="transfer">Transfer Bank</option>
+            <option value="cash_on_pickup">Bayar di Kasir (Cash on Pickup)</option>
+          </select>
+
+          <label for="specialNotes">Catatan Instruksi Khusus (Special Notes)</label>
+          <textarea id="specialNotes" name="special_notes" rows="2" placeholder="Contoh: Potong tepi putih 2mm"></textarea>
+
+          <label for="designFile">Berkas Desain (.pdf, .png, .jpg, .jpeg, .zip, .rar — maks. 25 MB)</label>
+          <input id="designFile" name="design_file" type="file" accept=".pdf,.png,.jpg,.jpeg,.zip,.rar" required />
+
+          <div class="price-box">
+            Estimasi Total Biaya: <span id="totalPreview">Rp0</span>
+          </div>
+
+          <button type="submit">Kirim Pesanan</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <h2 style="margin:0;">3. Pelacakan Status Pesanan Saya</h2>
+        <button type="button" class="secondary sm" id="btnRefreshOrders" style="margin:0;">Muat Ulang</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Kode Order</th>
+              <th>Jumlah</th>
+              <th>Total Biaya</th>
+              <th>Status Pesanan</th>
+              <th>Pembayaran</th>
+              <th>Catatan / Alasan Batal</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody">
+            <tr><td colspan="6">Silakan login terlebih dahulu untuk melihat riwayat pesanan.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#93c5fd;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <h2 style="margin:0; color:#1e3a8a;">4. Panel Operator / Admin Percetakan</h2>
+        <button type="button" class="sm" id="btnLoadAdminOrders" style="margin:0;">Muat Antrean Admin</button>
+      </div>
+
+      <div class="filter-bar">
+        <div>
+          <label for="filterStatus" style="margin-top:0;">Filter Status</label>
+          <select id="filterStatus">
+            <option value="">Semua Status</option>
+            <option value="Menunggu Pembayaran">Menunggu Pembayaran</option>
+            <option value="Verifikasi Berkas & Pembayaran">Verifikasi Berkas & Pembayaran</option>
+            <option value="Sedang Diproses/Dicetak">Sedang Diproses/Dicetak</option>
+            <option value="Siap Diambil">Siap Diambil</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Dibatalkan">Dibatalkan</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterDate" style="margin-top:0;">Filter Tanggal</label>
+          <input id="filterDate" type="date" />
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Order & Pelanggan</th>
+              <th>Produk & Catatan</th>
+              <th>Berkas Desain</th>
+              <th>Pembayaran</th>
+              <th>Status & Aksi Produksi</th>
+            </tr>
+          </thead>
+          <tbody id="adminOrdersBody">
+            <tr><td colspan="5">Login sebagai <strong>Admin</strong> lalu klik "Muat Antrean Admin" untuk mengelola pesanan.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "";
+    const STATUS_STEPS = [
+      "Menunggu Pembayaran",
+      "Verifikasi Berkas & Pembayaran",
+      "Sedang Diproses/Dicetak",
+      "Siap Diambil",
+      "Selesai"
+    ];
+
+    let authToken = localStorage.getItem("printease_token") || "";
+    let currentUser = JSON.parse(localStorage.getItem("printease_user") || "null");
+    let productsCache = [];
+
+    const feedbackEl = document.getElementById("feedback");
+    const sessionEl = document.getElementById("sessionStatus");
+    const btnLogout = document.getElementById("btnLogout");
+    const productSelect = document.getElementById("productSelect");
+    const extraInput = document.getElementById("extraOption");
+    const qtyInput = document.getElementById("quantityInput");
+    const totalPreview = document.getElementById("totalPreview");
+
+    function showFeedback(message, isError = false) {
+      feedbackEl.textContent = message;
+      feedbackEl.className = isError ? "alert err" : "alert ok";
+    }
+
+    function formatRupiah(num) {
+      return "Rp" + Number(num || 0).toLocaleString("id-ID");
+    }
+
+    function updateSessionUI() {
+      if (currentUser && authToken) {
+        sessionEl.textContent = `Login sebagai: ${currentUser.name} (${currentUser.role.toUpperCase()})`;
+        btnLogout.style.display = "inline-block";
+      } else {
+        sessionEl.textContent = "Status: Belum login";
+        btnLogout.style.display = "none";
+      }
+    }
+
+    function updatePricePreview() {
+      const selected = productsCache.find((p) => String(p.id) === String(productSelect.value));
+      const basePrice = selected ? Number(selected.base_price) : 0;
+      const extraPrice = Math.max(0, Number(extraInput.value || 0));
+      const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
+      totalPreview.textContent = formatRupiah((basePrice + extraPrice) * qty);
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/products`);
+        const json = await res.json();
+        if (!json.success) return;
+        productsCache = json.data;
+        productSelect.innerHTML = productsCache
+          .map((p) => `<option value="${p.id}">${p.name} (${p.material}) — Dasar ${formatRupiah(p.base_price)}</option>`)
+          .join("");
+        updatePricePreview();
+      } catch {
+        showFeedback("Gagal memuat katalog produk dari server.", true);
+      }
+    }
+
+    async function loadMyOrders() {
+      const tbody = document.getElementById("ordersBody");
+      if (!authToken) {
+        tbody.innerHTML = `<tr><td colspan="6">Silakan login terlebih dahulu untuk melihat riwayat pesanan.</td></tr>`;
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/my`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (!json.success) {
+          tbody.innerHTML = `<tr><td colspan="6">${json.message}</td></tr>`;
+          return;
+        }
+        if (!json.data.length) {
+          tbody.innerHTML = `<tr><td colspan="6">Belum ada pesanan.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = json.data
+          .map((o) => `
+            <tr>
+              <td><strong>${o.order_code}</strong></td>
+              <td>${o.quantity}</td>
+              <td>${formatRupiah(o.total_price)}</td>
+              <td><span class="badge ${o.order_status === "Dibatalkan" ? "err" : "ok"}">${o.order_status}</span></td>
+              <td>${o.payment_status}</td>
+              <td>${o.cancel_reason ? `<span style="color:#991b1b;">Batal: ${o.cancel_reason}</span>` : "-"}</td>
+            </tr>
+          `)
+          .join("");
+      } catch {
+        showFeedback("Gagal memuat riwayat pesanan.", true);
+      }
+    }
+
+    async function loadAdminOrders() {
+      const tbody = document.getElementById("adminOrdersBody");
+      if (!authToken) {
+        showFeedback("Silakan login sebagai Admin terlebih dahulu.", true);
+        return;
+      }
+
+      const status = document.getElementById("filterStatus").value;
+      const date = document.getElementById("filterDate").value;
+      const params = new URLSearchParams();
+      if (status) params.append("status", status);
+      if (date) params.append("date", date);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/orders?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (!json.success) {
+          tbody.innerHTML = `<tr><td colspan="5" style="color:#991b1b;">${json.message}</td></tr>`;
+          showFeedback(json.message, true);
+          return;
+        }
+        if (!json.data.length) {
+          tbody.innerHTML = `<tr><td colspan="5">Tidak ada antrean pesanan yang cocok dengan filter.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = json.data
+          .map((o) => {
+            const idx = STATUS_STEPS.indexOf(o.order_status);
+            const nextStatus = idx >= 0 && idx < STATUS_STEPS.length - 1 ? STATUS_STEPS[idx + 1] : null;
+            const isTerminal = o.order_status === "Selesai" || o.order_status === "Dibatalkan";
+
+            return `
+              <tr>
+                <td>
+                  <strong>${o.order_code}</strong><br/>
+                  <span>${o.customer_name}</span>
+                </td>
+                <td>
+                  ${o.product_name} (${o.quantity}x)<br/>
+                  <strong>${formatRupiah(o.total_price)}</strong><br/>
+                  <small style="color:#475569;">Catatan: ${o.special_notes || "-"}</small>
+                </td>
+                <td>
+                  <small>${o.original_filename}</small><br/>
+                  <button type="button" class="secondary sm" onclick="downloadOrderFile(${o.id}, '${o.original_filename.replace(/'/g, "")}')">Unduh File</button>
+                </td>
+                <td>
+                  <span class="badge ${o.payment_status === "Terverifikasi" ? "ok" : o.payment_status === "Ditolak" ? "err" : "warn"}">${o.payment_status}</span><br/>
+                  <button type="button" class="success sm" onclick="verifyPayment(${o.id}, 'Terverifikasi')">Verifikasi</button>
+                  <button type="button" class="danger sm" onclick="verifyPayment(${o.id}, 'Ditolak')">Tolak</button>
+                </td>
+                <td>
+                  <span class="badge">${o.order_status}</span><br/>
+                  ${nextStatus ? `<button type="button" class="sm" onclick="advanceStatus(${o.id}, '${nextStatus}')">Lanjut: ${nextStatus}</button>` : ""}
+                  ${!isTerminal ? `<button type="button" class="danger sm" onclick="cancelOrder(${o.id})">Batalkan</button>` : ""}
+                  ${o.cancel_reason ? `<div style="color:#991b1b; font-size:0.8rem; margin-top:4px;">Alasan: ${o.cancel_reason}</div>` : ""}
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+      } catch {
+        showFeedback("Gagal memuat antrean pesanan admin.", true);
+      }
+    }
+
+    async function advanceStatus(orderId, nextStatus) {
+      const res = await fetch(`${API_BASE}/api/admin/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ status_baru: nextStatus })
+      });
+      const json = await res.json();
+      showFeedback(json.message, !json.success);
+      if (json.success) {
+        loadAdminOrders();
+        loadMyOrders();
+      }
+    }
+
+    async function cancelOrder(orderId) {
+      const alasan = prompt("Masukkan alasan pembatalan pesanan (minimal 5 karakter):");
+      if (alasan === null) return;
+      const res = await fetch(`${API_BASE}/api/admin/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ status_baru: "Dibatalkan", alasan_batal: alasan })
+      });
+      const json = await res.json();
+      showFeedback(json.message, !json.success);
+      if (json.success) {
+        loadAdminOrders();
+        loadMyOrders();
+      }
+    }
+
+    async function verifyPayment(orderId, paymentStatus) {
+      const res = await fetch(`${API_BASE}/api/admin/orders/${orderId}/payment`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ payment_status: paymentStatus })
+      });
+      const json = await res.json();
+      showFeedback(json.message, !json.success);
+      if (json.success) {
+        loadAdminOrders();
+        loadMyOrders();
+      }
+    }
+
+    async function downloadOrderFile(orderId, filename) {
+      const res = await fetch(`${API_BASE}/api/admin/orders/${orderId}/download`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (!res.ok) {
+        showFeedback("Gagal mengunduh berkas desain.", true);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("btnRegister").addEventListener("click", async () => {
+      const name = document.getElementById("authName").value;
+      const email = document.getElementById("authEmail").value;
+      const password = document.getElementById("authPassword").value;
+      const role = document.getElementById("authRole").value;
+
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, role })
+      });
+      const json = await res.json();
+      showFeedback(json.message, !json.success);
+    });
+
+    document.getElementById("btnLogin").addEventListener("click", async () => {
+      const email = document.getElementById("authEmail").value;
+      const password = document.getElementById("authPassword").value;
+
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const json = await res.json();
+      if (json.success && json.data?.token) {
+        authToken = json.data.token;
+        currentUser = json.data.user;
+        localStorage.setItem("printease_token", authToken);
+        localStorage.setItem("printease_user", JSON.stringify(currentUser));
+        updateSessionUI();
+        showFeedback(`Login berhasil sebagai ${currentUser.role}.`);
+        loadMyOrders();
+        if (currentUser.role === "admin") loadAdminOrders();
+      } else {
+        showFeedback(json.message || "Login gagal.", true);
+      }
+    });
+
+    btnLogout.addEventListener("click", () => {
+      authToken = "";
+      currentUser = null;
+      localStorage.removeItem("printease_token");
+      localStorage.removeItem("printease_user");
+      updateSessionUI();
+      loadMyOrders();
+      showFeedback("Berhasil keluar dari sesi.");
+    });
+
+    document.getElementById("orderForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!authToken) {
+        showFeedback("Silakan login terlebih dahulu sebelum mengirim pesanan.", true);
+        return;
+      }
+
+      const fileInput = document.getElementById("designFile");
+      const file = fileInput.files[0];
+      const maxSize = 25 * 1024 * 1024;
+      if (file && file.size > maxSize) {
+        showFeedback("Ukuran berkas melebihi batas maksimum 25 MB.", true);
+        return;
+      }
+
+      const formData = new FormData(e.target);
+      const res = await fetch(`${API_BASE}/api/orders`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: formData
+      });
+      const json = await res.json();
+      if (json.success) {
+        showFeedback(`Pesanan ${json.data.order_code} berhasil dibuat (${formatRupiah(json.data.total_price)}).`);
+        e.target.reset();
+        updatePricePreview();
+        loadMyOrders();
+        if (currentUser?.role === "admin") loadAdminOrders();
+      } else {
+        showFeedback(json.message || "Gagal membuat pesanan.", true);
+      }
+    });
+
+    productSelect.addEventListener("change", updatePricePreview);
+    extraInput.addEventListener("input", updatePricePreview);
+    qtyInput.addEventListener("input", updatePricePreview);
+    document.getElementById("btnRefreshOrders").addEventListener("click", loadMyOrders);
+    document.getElementById("btnLoadAdminOrders").addEventListener("click", loadAdminOrders);
+    document.getElementById("filterStatus").addEventListener("change", loadAdminOrders);
+    document.getElementById("filterDate").addEventListener("change", loadAdminOrders);
+
+    updateSessionUI();
+    loadProducts();
+    loadMyOrders();
+    if (currentUser?.role === "admin") loadAdminOrders();
+  </script>
+</body>
+</html>
