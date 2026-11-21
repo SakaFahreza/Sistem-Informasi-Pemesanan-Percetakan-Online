@@ -1,6 +1,6 @@
 # PrintEase - Sistem Informasi dan Pemesanan Percetakan Online
 
-[![PrintEase Unit Tests](https://github.com/SakaFahreza/Sistem-Informasi-Pemesanan-Percetakan-Online/actions/workflows/test.yml/badge.svg)](https://github.com/SakaFahreza/Sistem-Informasi-Pemesanan-Percetakan-Online/actions/workflows/test.yml)
+[![PrintEase Unit Tests](https://github.com/SakaFahreza/Sistem-Informasi-Pemesanan-Percetakan-Online/Implementasi-&-Uji-test/printease/actions/workflows/test.yml/badge.svg)](https://github.com/SakaFahreza/Sistem-Informasi-Pemesanan-Percetakan-Online/Implementasi-&-Uji-test/printease/actions/workflows/test.yml)
 
 Sistem informasi dan pemesanan jasa percetakan berbasis web dengan arsitektur **MVC (Node.js + Express + MySQL)**, autentikasi **Bcrypt + JWT**, kontrol akses berbasis peran (**RBAC**), serta *automated unit testing*.
 
